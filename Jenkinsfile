@@ -58,17 +58,6 @@ pipeline {
             
             cleanWs()
         }
-        success {
-            
-            mail to: 'rubengs.j@gmail.com',
-                 subject: "Build Success: ${currentBuild.fullDisplayName}",
-                 body: "Build ${currentBuild.result}: ${env.BUILD_URL}"
-        }
-        failure {
-            
-            mail to: 'rubengs.j@gmail.com',
-                 subject: "Build Failed: ${currentBuild.fullDisplayName}",
-                 body: "Build ${currentBuild.result}: ${env.BUILD_URL}"
-        }
+        
     }
 }
