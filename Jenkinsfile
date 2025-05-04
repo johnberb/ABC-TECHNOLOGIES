@@ -49,6 +49,16 @@ pipeline {
                                 fingerprint: true
             }
         }
+        stage('Docker Deployment') {
+            steps {
+                dir('ansible') {  // Relative to java_build/
+                    ansiblePlaybook(
+                        playbook: 'playbooks/docker.yml',
+                        inventory: 'inventories/production/hosts'
+                    )
+                }
+            }
+        }
         
         
     }
