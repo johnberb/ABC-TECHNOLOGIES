@@ -49,16 +49,26 @@ pipeline {
                                 fingerprint: true
             }
         }
-        stage('Run Ansible') {
+        stage('Deploy Dockerfile via SSH') {
             steps {
-                sshagent(['ansible-ssh-key']) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ansible@10.10.10.229 \
-                    'cd /path/to/ansible/project && \
-                    ansible-playbook -i inventories/production playbooks/deploy.yml \
-                    --extra-vars "jenkins_build=${BUILD_NUMBER}"'
-                    """
-                }
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: 'Ansible', 
+                            transfers: [
+                                sshTransfer(
+                                    sourceFiles: 'Dockerfile', // File to send
+                                    removePrefix: 'Dockerfile', // Optional: adjust path if needed
+                                    remoteDirectory: '/opt',   // Remote target directory
+                                    execCommand: ''            // Optional: post-transfer command
+                                )
+                            ],
+                            usePromotionTimestamp: false,
+                            useWorkspaceInPromotion: false,
+                            verbose: true
+                        )
+                    ]
+                )
             }
         }
         
