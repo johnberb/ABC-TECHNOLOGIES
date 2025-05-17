@@ -58,7 +58,7 @@ pipeline {
                             transfers: [
                                 sshTransfer(
                                     sourceFiles: 'Dockerfile', // File to send
-                                    removePrefix: 'Dockerfile', // Optional: adjust path if needed
+                                    //removePrefix: 'Dockerfile', // Optional: adjust path if needed
                                     remoteDirectory: '/opt',   // Remote target directory
                                     execCommand: ''            // Optional: post-transfer command
                                 )
