@@ -31,14 +31,11 @@ pipeline {
         // STAGE 3: Verify SSH Connection
         stage('Test SSH Connection') {
             steps {
-                script {
-                    def result = sshCommand(
-                        remote: [name: 'Ansible'],
-                        command: 'whoami && pwd && ls -la /tmp'
-                    )
-                    echo "SSH Test Output: ${result}"
-                }
-            }
+        sshCommand(
+            remote: [name: 'Ansible'],
+            command: 'echo "Connected as $(whoami)"'
+                  )
+           }
         }
         
         // STAGE 4: Transfer Artifacts
