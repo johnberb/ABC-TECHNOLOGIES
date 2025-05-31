@@ -33,9 +33,9 @@ pipeline {
             steps {
                 script {
                     sshCommand remote: [
-                        host: 'your.remote.server.com',
-                        user: 'your-ssh-username', // ← ADD THIS LINE
-                        identityFile: '/path/to/private/key' // or credentialsId if using Jenkins credentials
+                        host: '10.10.10.229',
+                        user: 'ansible', // ← ADD THIS LINE
+                        identityFile: 'ansible-ssh-key' // or credentialsId if using Jenkins credentials
                     ], command: 'echo Connection successful'
                 }
             }
