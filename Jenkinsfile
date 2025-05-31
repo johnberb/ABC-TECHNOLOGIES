@@ -134,11 +134,6 @@ pipeline {
         always {
             cleanWs()
         }
-        success {
-            slackSend(color: 'good', message: "SUCCESS: Build ${BUILD_NUMBER} deployed")
-        }
-        failure {
-            slackSend(color: 'danger', message: "FAILED: Build ${BUILD_NUMBER}")
-        }
+        
     }
 }
