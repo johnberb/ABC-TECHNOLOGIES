@@ -30,15 +30,16 @@ pipeline {
         
         // STAGE 3: Verify SSH Connection
         stage('Test SSH Connection') {
-    steps {
-        sshCommand remote: [
-            name: 'Ansible',
-            host: '10.10.10.229',
-            user: 'ansible',
-            identityFile: '~/.ssh/id_rsa'
-        ], command: 'echo "Connected as $(whoami)"'
-    }
-}
+            steps {
+                script {
+                    def result = sshCommand(
+                        remote: [name: 'Ansible'],
+                        command: 'whoami && pwd && ls -la /tmp'
+                    )
+                    echo "SSH Test Output: ${result}"
+                }
+            }
+        }
         
         // STAGE 4: Transfer Artifacts
         stage('Transfer WAR File') {
