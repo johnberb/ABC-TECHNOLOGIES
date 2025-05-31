@@ -32,16 +32,14 @@ pipeline {
         stage('Test SSH Connection') {
             steps {
                 script {
-                    sshCommand(
-                        remote: [
-                            name: 'ansible',
-                            host: '10.10.10.229',
-                            user: 'ansible',
-                            identity: '/var/lib/jenkins/.ssh',
-                            allowAnyHosts: true
-                        ],
-                        command: 'whoami && pwd'
-                    )
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'ansible-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 'whoami && pwd'
+                        """
+                    }
                 }
             }
         }
