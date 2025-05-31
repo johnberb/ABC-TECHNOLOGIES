@@ -35,9 +35,9 @@ pipeline {
                     sshCommand(
                         remote: [
                             name: 'ansible',
-                            host: '192.168.1.100',
-                            user: 'ubuntu',
-                            identity: 'jenkins-ssh-key'
+                            host: '10.10.10.229',
+                            user: 'ansible',
+                            identity: 'ansible-ssh-key'
                         ],
                         knownHosts: '10.10.10.229 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBF2mAO7g7oYm694zY8xzsVriAzwXW+VuThXQKZ5x+S1KPs283L2o4+esJdXcuDWDxFxpIGNtaTGNOLvWpsw6LaI=',
                         command: 'ls -la'
