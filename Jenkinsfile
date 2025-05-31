@@ -32,11 +32,11 @@ pipeline {
         stage('Test SSH Connection') {
             steps {
                 script {
-                    def result = sshCommand(
-                        remote: [name: 'Ansible'],
-                        command: 'whoami && pwd && ls -la /tmp'
-                    )
-                    echo "SSH Test Output: ${result}"
+                    sshCommand remote: [
+                        host: 'your.remote.server.com',
+                        user: 'your-ssh-username', // ← ADD THIS LINE
+                        identityFile: '/path/to/private/key' // or credentialsId if using Jenkins credentials
+                    ], command: 'echo Connection successful'
                 }
             }
         }
