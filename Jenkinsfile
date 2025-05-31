@@ -7,47 +7,63 @@ pipeline {
     
     environment {
         ANSIBLE_HOME = '/home/ansible/ansible'
-        KUBECONFIG = '/home/docker/.kube/config'
         BUILD_NUMBER = "${env.BUILD_ID}"
     }
     
     stages {
+        // STAGE 1: Code Checkout
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/johnberb/ABC-TECHNOLOGIES.git'
+                git branch: 'master', 
+                     url: 'https://github.com/johnberb/ABC-TECHNOLOGIES.git'
             }
         }
         
+        // STAGE 2: Build and Test
         stage('Build & Test') {
             steps {
                 sh 'mvn clean package'
                 junit '**/target/surefire-reports/*.xml'
-                jacoco execPattern: '**/target/jacoco.exec',
-                      classPattern: '**/target/classes',
-                      sourcePattern: '**/src/main/java'
+                archiveArtifacts artifacts: '**/target/*.war', fingerprint: true
             }
         }
         
-        stage('Prepare Artifacts') {
+        // STAGE 3: Verify SSH Connection
+        stage('Test SSH Connection') {
             steps {
-                archiveArtifacts artifacts: '**/target/*.war', fingerprint: true
+                script {
+                    def result = sshCommand(
+                        remote: [name: 'Ansible'],
+                        command: 'whoami && pwd && ls -la /tmp'
+                    )
+                    echo "SSH Test Output: ${result}"
+                }
+            }
+        }
+        
+        // STAGE 4: Transfer Artifacts
+        stage('Transfer WAR File') {
+            steps {
                 sshPublisher(
                     publishers: [
                         sshPublisherDesc(
                             configName: 'Ansible',
                             transfers: [
                                 sshTransfer(
-                                    sourceFiles: '**/target/*.war',
-                                    remoteDirectory: '/tmp/jenkins-artifacts/',
+                                    sourceFiles: 'target/*.war',
+                                    removePrefix: 'target',
+                                    remoteDirectory: '/tmp/jenkins-artifacts',
                                     execCommand: 'chmod 644 /tmp/jenkins-artifacts/*.war'
                                 )
-                            ]
+                            ],
+                            verbose: true
                         )
                     ]
                 )
             }
         }
         
+        // STAGE 5: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 sshPublisher(
@@ -57,20 +73,23 @@ pipeline {
                             transfers: [
                                 sshTransfer(
                                     execCommand: """
+                                    cd ${ANSIBLE_HOME} && \
                                     ansible-playbook \
-                                    -i /etc/ansible/hosts.ini \
-                                    ${ANSIBLE_HOME}/playbooks/docker_build.yml \
-                                    --extra-vars \"artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war\"
+                                        -i /etc/ansible/hosts.ini \
+                                        playbooks/docker_build.yml \
+                                        --extra-vars \"artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war\"
                                     """
                                 )
-                            ]
+                            ],
+                            verbose: true
                         )
                     ]
                 )
             }
         }
         
-        stage('Deploy to Kubernetes') {
+        // STAGE 6: Deploy to Kubernetes
+        stage('Deploy to K8s') {
             steps {
                 sshPublisher(
                     publishers: [
@@ -79,41 +98,33 @@ pipeline {
                             transfers: [
                                 sshTransfer(
                                     execCommand: """
+                                    cd ${ANSIBLE_HOME} && \
                                     ansible-playbook \
-                                    -i /etc/ansible/hosts.ini \
-                                    ${ANSIBLE_HOME}/playbooks/k8s_deploy.yml \
-                                    --extra-vars \"image_tag=${BUILD_NUMBER}\"
+                                        -i /etc/ansible/hosts.ini \
+                                        playbooks/k8s_deploy.yml \
+                                        --extra-vars \"image_tag=${BUILD_NUMBER}\"
                                     """
                                 )
-                            ]
+                            ],
+                            verbose: true
                         )
                     ]
                 )
             }
         }
         
+        // STAGE 7: Verify Deployment
         stage('Verify Deployment') {
             steps {
                 script {
-                    def verify = sshPublisher(
-                        publishers: [
-                            sshPublisherDesc(
-                                configName: 'Kubernetes',
-                                transfers: [
-                                    sshTransfer(
-                                        execCommand: """
-                                        kubectl get pods -n default -l app=myapp && \
-                                        kubectl get svc myapp -n default
-                                        """
-                                    )
-                                ]
-                            )
-                        ]
+                    def result = sshCommand(
+                        remote: [name: 'Kubernetes'],
+                        command: """
+                        kubectl get pods -n default -l app=myapp && \
+                        kubectl get svc myapp -n default
+                        """
                     )
-                    
-                    if (verify != 0) {
-                        error('Deployment verification failed')
-                    }
+                    echo "Deployment Status:\n${result}"
                 }
             }
         }
@@ -124,10 +135,10 @@ pipeline {
             cleanWs()
         }
         success {
-            slackSend(color: 'good', message: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'")
+            slackSend(color: 'good', message: "SUCCESS: Build ${BUILD_NUMBER} deployed")
         }
         failure {
-            slackSend(color: 'danger', message: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'")
+            slackSend(color: 'danger', message: "FAILED: Build ${BUILD_NUMBER}")
         }
     }
 }
