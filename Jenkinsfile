@@ -39,7 +39,7 @@ pipeline {
                             user: 'ubuntu',
                             identity: 'jenkins-ssh-key'
                         ],
-                        allowAnyHosts: 'true', // Disables host key checking
+                        knownHosts: '10.10.10.229 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBF2mAO7g7oYm694zY8xzsVriAzwXW+VuThXQKZ5x+S1KPs283L2o4+esJdXcuDWDxFxpIGNtaTGNOLvWpsw6LaI=',
                         command: 'ls -la'
                     )
                 }
