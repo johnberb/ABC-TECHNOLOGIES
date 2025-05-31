@@ -37,9 +37,10 @@ pipeline {
                             name: 'ansible',
                             host: '10.10.10.229',
                             user: 'ansible',
-                            identity: 'ansible-ssh-key'
+                            identity: 'ansible-ssh-key',
+                            allowAnyHosts: true
                         ],
-                        command: 'ls -la'
+                        command: 'whoami && pwd'
                     )
                 }
             }
