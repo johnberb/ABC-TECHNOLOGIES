@@ -37,7 +37,7 @@ pipeline {
                             name: 'ansible',
                             host: '10.10.10.229',
                             user: 'ansible',
-                            identity: '/var/lib/jenkins',
+                            identity: '/var/lib/jenkins/.ssh',
                             allowAnyHosts: true
                         ],
                         command: 'whoami && pwd'
