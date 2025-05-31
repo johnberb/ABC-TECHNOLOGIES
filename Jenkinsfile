@@ -37,7 +37,8 @@ pipeline {
                         host: '10.10.10.229',
                         user: 'ansible', // ← ADD THIS LINE
                         identityFile: 'ansible-ssh-key' // or credentialsId if using Jenkins credentials
-                    ], command: 'echo Connection successful'
+                    ],  allowAnyHosts: true,
+                        command: 'echo Connection successful'
                 }
             }
         }
