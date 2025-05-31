@@ -39,8 +39,8 @@ pipeline {
                             user: 'ansible',
                             identity: 'ansible-ssh-key'
                         ],
-                        knownHosts: '10.10.10.229 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBF2mAO7g7oYm694zY8xzsVriAzwXW+VuThXQKZ5x+S1KPs283L2o4+esJdXcuDWDxFxpIGNtaTGNOLvWpsw6LaI=',
-                        command: 'ls -la'
+                        command: 'ls -la',
+                        disableHostKeyChecking: true
                     )
                 }
             }
