@@ -39,8 +39,7 @@ pipeline {
                             user: 'ansible',
                             identity: 'ansible-ssh-key'
                         ],
-                        command: 'ls -la',
-                        disableHostKeyChecking: true
+                        command: 'ls -la'
                     )
                 }
             }
