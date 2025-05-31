@@ -33,6 +33,7 @@ pipeline {
             steps {
                 script {
                     sshCommand remote: [
+                        name: 'ansible',
                         host: '10.10.10.229',
                         user: 'ansible', // ← ADD THIS LINE
                         identityFile: 'ansible-ssh-key' // or credentialsId if using Jenkins credentials
