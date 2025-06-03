@@ -66,40 +66,24 @@ pipeline {
                 )
             }
         }
-        stage('Debug Key Path') {
+        
+        // STAGE 5: Build Docker Image
+        stage('Build Docker Image') {
             steps {
                 withCredentials([sshUserPrivateKey(
                     credentialsId: 'ansible-ssh-key',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     sh """
-                        echo "SSH key is located at: ${SSH_KEY}"
-                        ls -la ${SSH_KEY}
+                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -i ${SSH_KEY}"
+                        ansible-playbook \
+                            -i /etc/ansible/hosts \
+                            playbooks/docker_build.yml \
+                            --extra-vars \"artifact_path=${REMOTE_ARTIFACT_DIR}/ABCtechnologies-1.0.war\"
                     """
                 }
             }
-        }
-        
-        // STAGE 5: Build Docker Image
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    withCredentials([sshUserPrivateKey(
-                        credentialsId: 'ansible-ssh-key',
-                        keyFileVariable: 'SSH_KEY'
-                    )]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
-                                cd ${ANSIBLE_HOME} && \
-                                ansible-playbook \
-                                    -i /etc/ansible/hosts \
-                                    playbooks/docker_build.yml \
-                                    --extra-vars \"artifact_path=${REMOTE_ARTIFACT_DIR}/ABCtechnologies-1.0.war\"
-                            '
-                        """
-                    }
-                }
-            }
+            
         }
         
         // STAGE 6: Deploy to Kubernetes
