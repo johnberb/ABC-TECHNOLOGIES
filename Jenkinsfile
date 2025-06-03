@@ -8,6 +8,7 @@ pipeline {
     environment {
         ANSIBLE_HOME = '/home/ansible/ansible'
         BUILD_NUMBER = "${env.BUILD_ID}"
+        REMOTE_ARTIFACT_DIR = '/tmp/jenkins-artifacts'
     }
     
     stages {
@@ -37,7 +38,7 @@ pipeline {
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 'whoami && pwd'
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 'whoami && pwd && mkdir -p ${REMOTE_ARTIFACT_DIR}'
                         """
                     }
                 }
@@ -55,8 +56,8 @@ pipeline {
                                 sshTransfer(
                                     sourceFiles: 'target/*.war',
                                     removePrefix: 'target',
-                                    remoteDirectory: '/tmp/jenkins-artifacts',
-                                    execCommand: 'chmod 644 /tmp/jenkins-artifacts/*.war'
+                                    remoteDirectory: REMOTE_ARTIFACT_DIR,
+                                    execCommand: "chmod 644 ${REMOTE_ARTIFACT_DIR}/*.war"
                                 )
                             ],
                             verbose: true
@@ -69,50 +70,44 @@ pipeline {
         // STAGE 5: Build Docker Image
         stage('Build Docker Image') {
             steps {
-                sshPublisher(
-                    publishers: [
-                        sshPublisherDesc(
-                            configName: 'Ansible',
-                            transfers: [
-                                sshTransfer(
-                                    execCommand: """
-                                    cd ${ANSIBLE_HOME} && \
-                                    ansible-playbook \
-                                        -i /etc/ansible/hosts.ini \
-                                        playbooks/docker_build.yml \
-                                        --extra-vars \"artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war\"
-                                    """
-                                )
-                            ],
-                            verbose: true
-                        )
-                    ]
-                )
+                script {
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'ansible-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                cd ${ANSIBLE_HOME} && \
+                                ansible-playbook \
+                                    -i /etc/ansible/hosts.ini \
+                                    playbooks/docker_build.yml \
+                                    --extra-vars \"artifact_path=${REMOTE_ARTIFACT_DIR}/ABCtechnologies-1.0.war\"
+                            '
+                        """
+                    }
+                }
             }
         }
         
         // STAGE 6: Deploy to Kubernetes
         stage('Deploy to K8s') {
             steps {
-                sshPublisher(
-                    publishers: [
-                        sshPublisherDesc(
-                            configName: 'Kubernetes',
-                            transfers: [
-                                sshTransfer(
-                                    execCommand: """
-                                    cd ${ANSIBLE_HOME} && \
-                                    ansible-playbook \
-                                        -i /etc/ansible/hosts.ini \
-                                        playbooks/k8s_deploy.yml \
-                                        --extra-vars \"image_tag=${BUILD_NUMBER}\"
-                                    """
-                                )
-                            ],
-                            verbose: true
-                        )
-                    ]
-                )
+                script {
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'ansible-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                cd ${ANSIBLE_HOME} && \
+                                ansible-playbook \
+                                    -i /etc/ansible/hosts.ini \
+                                    playbooks/k8s_deploy.yml \
+                                    --extra-vars \"image_tag=${BUILD_NUMBER}\"
+                            '
+                        """
+                    }
+                }
             }
         }
         
@@ -120,14 +115,18 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-                    def result = sshCommand(
-                        remote: [name: 'Kubernetes'],
-                        command: """
-                        kubectl get pods -n default -l app=myapp && \
-                        kubectl get svc myapp -n default
-                        """
-                    )
-                    echo "Deployment Status:\n${result}"
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'ansible-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        def result = sh(script: """
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                kubectl get pods -n default -l app=myapp && \
+                                kubectl get svc myapp -n default
+                            '
+                        """, returnStdout: true)
+                        echo "Deployment Status:\n${result}"
+                    }
                 }
             }
         }
@@ -137,6 +136,5 @@ pipeline {
         always {
             cleanWs()
         }
-        
     }
 }
