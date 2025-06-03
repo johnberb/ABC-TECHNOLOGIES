@@ -1,0 +1,92 @@
+---
+- name: Build and Push Docker Image
+  hosts: ansible_servers
+  become: true
+  remote_user: ansible
+  vars:
+    vars_files: "inventory/production/group_vars/all/vault.yml"
+    artifact_path: "/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
+    image_name: "johnberb/myapp"
+    image_tag: "{{ lookup('env', 'BUILD_NUMBER') | default('latest') }}"
+    docker_registry: "docker.io"
+    dockerhub_user: "johnberb"
+    dockerhub_pass: "dckr_pat_QLHyZwiZ-IDZxib0Y3Kg1Fiemfw"
+    build_dir: "/tmp/docker-build"
+    war_filename: "ABCtechnologies-1.0.war"  # New variable for consistency
+
+  tasks:
+    - name: Check Docker daemon status
+      ansible.builtin.command: systemctl is-active docker
+      register: docker_status
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Ensure Docker is running
+      ansible.builtin.systemd:
+        name: docker
+         state: started
+      when: docker_status.rc != 0
+
+    - name: Ensure user is in docker group
+      ansible.builtin.user:
+        name: "ansible"
+        groups: docker
+        append: yes
+
+    - name: Ensure build directory exists
+      ansible.builtin.file:
+        path: "{{ build_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy WAR artifact
+      ansible.builtin.copy:
+        src: "{{ artifact_path }}"
+        dest: "{{ build_dir }}/{{ war_filename }}"
+        remote_src: yes
+        mode: '0644'
+
+    - name: Deploy Dockerfile 
+      ansible.builtin.template:
+        src: "templates/Dockerfile.j2"
+        dest: "{{ build_dir }}/Dockerfile"
+        mode: '0644'  
+      vars:
+        war_file: "{{ war_filename }}"  # Pass the correct filename to template
+
+    - name: Verify build files
+      ansible.builtin.command: "ls -la {{ build_dir }}"
+      register: build_files
+      changed_when: false
+
+    - name: Debug build files
+      ansible.builtin.debug:
+        var: build_files.stdout_lines
+
+    - name: Login to Docker Hub
+      community.docker.docker_login:
+        username: "{{ dockerhub_user }}"
+        password: "{{ dockerhub_pass }}"
+        registry_url: "https://index.docker.io/v1/"
+      no_log: true
+
+    - name: Build and push Docker image
+      community.docker.docker_image:
+        name: "{{ image_name }}"
+        tag: "{{ image_tag }}"
+        push: yes
+        source: build
+        build:
+          path: "{{ build_dir }}"
+          dockerfile: "Dockerfile"
+          pull: yes
+        force_source: yes
+      register: build_result
+      notify:
+        - Cleanup build directory
+
+  handlers:
+    - name: Cleanup build directory
+      ansible.builtin.file:
+        path: "{{ build_dir }}"
+        state: absent
