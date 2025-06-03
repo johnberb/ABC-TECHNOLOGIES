@@ -66,6 +66,19 @@ pipeline {
                 )
             }
         }
+        stage('Debug Key Path') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ansible-ssh-key',
+                    keyFileVariable: 'SSH_KEY'
+                )]) {
+                    sh """
+                        echo "SSH key is located at: ${SSH_KEY}"
+                        ls -la ${SSH_KEY}
+                    """
+                }
+            }
+        }
         
         // STAGE 5: Build Docker Image
         stage('Build Docker Image') {
