@@ -79,7 +79,7 @@ pipeline {
                             ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
                                 cd ${ANSIBLE_HOME} && \
                                 ansible-playbook \
-                                    -i /etc/ansible/hosts.ini \
+                                    -i /etc/ansible/hosts \
                                     playbooks/docker_build.yml \
                                     --extra-vars \"artifact_path=${REMOTE_ARTIFACT_DIR}/ABCtechnologies-1.0.war\"
                             '
@@ -101,7 +101,7 @@ pipeline {
                             ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
                                 cd ${ANSIBLE_HOME} && \
                                 ansible-playbook \
-                                    -i /etc/ansible/hosts.ini \
+                                    -i /etc/ansible/hosts \
                                     playbooks/k8s_deploy.yml \
                                     --extra-vars \"image_tag=${BUILD_NUMBER}\"
                             '
