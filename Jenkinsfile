@@ -74,13 +74,27 @@ pipeline {
                     credentialsId: 'ansible-ssh-key',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    sh """
-                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -i ${SSH_KEY}"
+                    // First ensure Ansible is available
+                    sh 'which ansible-playbook || echo "Ansible not found"'
+                    
+                    // Secure way to handle the SSH key without interpolation
+                    sh '''
+                        # Set environment variables securely
+                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -i "$SSH_KEY"
+                        export PATH="$PATH:/usr/local/bin"  # Add common paths where Ansible might be
+                        
+                        # Verify Ansible is available
+                        if ! command -v ansible-playbook &> /dev/null; then
+                            echo "ERROR: ansible-playbook not found in PATH"
+                            exit 1
+                        fi
+                        
+                        # Execute the playbook
                         ansible-playbook \
                             -i /etc/ansible/hosts \
                             playbooks/docker_build.yml \
-                            --extra-vars \"artifact_path=${REMOTE_ARTIFACT_DIR}/ABCtechnologies-1.0.war\"
-                    """
+                            --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
+                    '''
                 }
             }
             
