@@ -8,7 +8,7 @@ pipeline {
     environment {
         ANSIBLE_HOME = '/home/ansible/ansible'
         BUILD_NUMBER = "${env.BUILD_ID}"
-        REMOTE_ARTIFACT_DIR = 'tmp/target'
+        REMOTE_ARTIFACT_DIR = 'tmp/jenkins-artifacts'
     }
     
     stages {
