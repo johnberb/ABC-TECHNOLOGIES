@@ -75,6 +75,15 @@ pipeline {
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     sh '''
+                        # 1. Copy WAR from Jenkins to Ansible server
+                        scp -i "$SSH_KEY" \
+                            /var/lib/jenkins/jobs/java\ build/builds/1/archive/target/ABCtechnologies-1.0.war \
+                            ansible@10.10.10.229:/home/ansible/ansible/tmp/jenkins-artifacts/
+
+                        # 2. Verify file transfer
+                        ssh -i "$SSH_KEY" ansible@10.10.10.229 \
+                            "ls -l /home/ansible/ansible/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
+                    
                         #copy private key temporarily onto the ansible server
                         scp -i "$SSH_KEY" "$SSH_KEY" ansible@10.10.10.229:/home/ansible/.ssh/jenkins_key
                         ssh -i "$SSH_KEY" ansible@10.10.10.229 "chmod 600 ~/.ssh/jenkins_key"
