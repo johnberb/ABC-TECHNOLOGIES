@@ -34,7 +34,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([sshUserPrivateKey(
-                        credentialsId: 'ansible-ssh-key',
+                        credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         sh """
@@ -71,7 +71,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ansible-ssh-key',
+                    credentialsId: 'Ans2-ssh-key',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     // First ensure Ansible is available
@@ -105,11 +105,11 @@ pipeline {
             steps {
                 script {
                     withCredentials([sshUserPrivateKey(
-                        credentialsId: 'ansible-ssh-key',
+                        credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' root@10.10.10.229 '
                                 cd ${ANSIBLE_HOME} && \
                                 ansible-playbook \
                                     -i /etc/ansible/hosts \
@@ -127,11 +127,11 @@ pipeline {
             steps {
                 script {
                     withCredentials([sshUserPrivateKey(
-                        credentialsId: 'ansible-ssh-key',
+                        credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         def result = sh(script: """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' root@10.10.10.229 '
                                 kubectl get pods -n default -l app=myapp && \
                                 kubectl get svc myapp -n default
                             '
