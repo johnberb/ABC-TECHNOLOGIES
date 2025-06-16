@@ -5,7 +5,7 @@
   remote_user: ansible
   vars:
     vars_files: "inventory/production/group_vars/all/vault.yml"
-    artifact_path: "/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
+    artifact_path: "/home/ansible/ansible/tmp/jenkins-artifacts"
     image_name: "johnberb/myapp"
     image_tag: "{{ lookup('env', 'BUILD_NUMBER') | default('latest') }}"
     docker_registry: "docker.io"
