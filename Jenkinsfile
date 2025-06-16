@@ -68,38 +68,29 @@ pipeline {
         }
         
         // STAGE 5: Build Docker Image
-        stage('Build Docker Image') {
+        stage('Run Ansible Playbook') {
             steps {
                 withCredentials([sshUserPrivateKey(
-                    credentialsId: 'Ans2-ssh-key', 
+                    credentialsId: 'Ans2-ssh-key',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     sh '''
-                        # Set strict permissions for the SSH key
+                        # Set strict permissions for the key
                         chmod 600 "$SSH_KEY"
-                        # Test SSH access first (debugging step)
-                        echo "Testing SSH connection to ansible@10.10.10.229..."
-                        ssh -vvv -i "$SSH_KEY" -o StrictHostKeyChecking=no ansible@10.10.10.229 "echo 'SSH success!'" || {
-                            echo "ERROR: SSH failed! Check key, user, and network."
+        
+                        # Verify the key works manually first
+                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "echo 'SSH test successful'" || {
+                            echo "ERROR: SSH test failed"
                             exit 1
                         }
-                        
-                        # Execute playbook on Ansible server via SSH
-                        ssh -o StrictHostKeyChecking=no \
-                            -i "$SSH_KEY" \
-                            ansible@10.10.10.229 \
-                            "ansible-playbook \
-                                -i /etc/ansible/hosts \
-                                ${ANSIBLE_HOME}/playbooks/docker_build.yml \
-                                --private-key "$SSH_KEY" \
-                                --user ansible  
-                                --extra-vars 'artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war'"
-                        
-                        # Verify execution was successful
-                        if [ $? -ne 0 ]; then
-                            echo "ERROR: Ansible playbook execution failed"
-                            exit 1
-                        fi
+        
+                        # Run Ansible with explicit key and user
+                        ansible-playbook \
+                            -i /etc/ansible/hosts \
+                            ${ANSIBLE_HOME}/playbooks/docker_build.yml \
+                            --private-key="$SSH_KEY" \
+                            --user=ansible \
+                            --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
                     '''
                 }
             }
