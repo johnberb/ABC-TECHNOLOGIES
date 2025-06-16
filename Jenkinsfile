@@ -54,7 +54,7 @@ pipeline {
                             configName: 'Ansible',
                             transfers: [
                                 sshTransfer(
-                                    sourceFiles: '/var/lib/jenkins/jobs/java build/builds/12/archive/target/*.war'',
+                                    sourceFiles: '/var/lib/jenkins/jobs/java build/builds/12/archive/target/*.war',
                                     removePrefix: '/var/lib/jenkins/jobs/java build/builds/12/archive/target',
                                     remoteDirectory: REMOTE_ARTIFACT_DIR,
                                     execCommand: "chmod 644 ${REMOTE_ARTIFACT_DIR}/*.war"
