@@ -89,7 +89,7 @@ pipeline {
                             -i /etc/ansible/hosts \
                             ${ANSIBLE_HOME}/playbooks/docker_build.yml \
                             --private-key="$SSH_KEY" \
-                            --user=ansible \
+                            --user=ansible@10.10.10.229 \
                             --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
                     '''
                 }
