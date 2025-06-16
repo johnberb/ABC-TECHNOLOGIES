@@ -75,6 +75,10 @@ pipeline {
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     sh '''
+                        #copy private key temporarily onto the ansible server
+                        scp -i "$SSH_KEY" "$SSH_KEY" ansible@10.10.10.229:/home/ansible/.ssh/jenkins_key
+                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "chmod 600 ~/.ssh/jenkins_key"
+  
                         # Test SSH connection first
                         ssh -i "$SSH_KEY" ansible@10.10.10.229 "echo 'SSH test successful'"
         
