@@ -84,7 +84,7 @@ pipeline {
                             ansible@10.10.10.229 \
                             "ansible-playbook \
                                 -i /etc/ansible/hosts \
-                                ${ ANSIBLE_HOME}/playbooks/docker_build.yml \
+                                ${ANSIBLE_HOME}/playbooks/docker_build.yml \
                                 --extra-vars 'artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war'"
                         
                         # Verify execution was successful
