@@ -75,23 +75,17 @@ pipeline {
                     keyFileVariable: 'SSH_KEY'
                 )]) {
                     sh '''
-                        # Set strict permissions for the key
-                        chmod 600 "$SSH_KEY"
+                        # Test SSH connection first
+                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "echo 'SSH test successful'"
         
-                        # Verify the key works manually first
-                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "echo 'SSH test successful'" || {
-                            echo "ERROR: SSH test failed"
-                            exit 1
-                        }
-        
-                        # Run Ansible with explicit key and user
+                        # Run Ansible PLAYBOOK on the Ansible server (not locally)
                         ssh -i "$SSH_KEY" ansible@10.10.10.229 "
+                            cd /home/ansible/ansible &&
                             ansible-playbook \
                                 -i /etc/ansible/hosts \
-                                ${ANSIBLE_HOME}/playbooks/docker_build.yml \
-                                --private-key="$SSH_KEY" \
-                                --user=ansible@10.10.10.229 \
-                                --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
+                                playbooks/docker_build.yml \
+                                --extra-vars 'artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war'
+                        "
                     '''
                 }
             }
