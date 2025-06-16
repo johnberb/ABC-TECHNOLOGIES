@@ -71,33 +71,30 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 withCredentials([sshUserPrivateKey(
-                    credentialsId: 'Ans2-ssh-key',
+                    credentialsId: 'Ans2-ssh-key', 
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    // First ensure Ansible is available
-                    sh 'which ansible-playbook || echo "Ansible not found"'
-                    
-                    // Secure way to handle the SSH key without interpolation
                     sh '''
-                        # Set environment variables securely
-                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -i "$SSH_KEY"
-                        export PATH="$PATH:/usr/bin"  
+                        # Set strict permissions for the SSH key
+                        chmod 600 "$SSH_KEY"
                         
-                        # Verify Ansible is available
-                        if ! command -v ansible-playbook &> /dev/null; then
-                            echo "ERROR: ansible-playbook not found in PATH"
+                        # Execute playbook on Ansible server via SSH
+                        ssh -o StrictHostKeyChecking=no \
+                            -i "$SSH_KEY" \
+                            ansible@10.10.10.229 \
+                            "ansible-playbook \
+                                -i /etc/ansible/hosts \
+                                ${ ANSIBLE_HOME}/playbooks/docker_build.yml \
+                                --extra-vars 'artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war'"
+                        
+                        # Verify execution was successful
+                        if [ $? -ne 0 ]; then
+                            echo "ERROR: Ansible playbook execution failed"
                             exit 1
                         fi
-                        
-                        # Execute the playbook
-                        ansible-playbook \
-                            -i /etc/ansible/hosts \
-                            playbooks/docker_build.yml \
-                            --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
                     '''
                 }
             }
-            
         }
         
         // STAGE 6: Deploy to Kubernetes
