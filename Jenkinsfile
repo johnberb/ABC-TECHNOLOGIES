@@ -85,12 +85,13 @@ pipeline {
                         }
         
                         # Run Ansible with explicit key and user
-                        ansible-playbook \
-                            -i /etc/ansible/hosts \
-                            ${ANSIBLE_HOME}/playbooks/docker_build.yml \
-                            --private-key="$SSH_KEY" \
-                            --user=ansible@10.10.10.229 \
-                            --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
+                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "
+                            ansible-playbook \
+                                -i /etc/ansible/hosts \
+                                ${ANSIBLE_HOME}/playbooks/docker_build.yml \
+                                --private-key="$SSH_KEY" \
+                                --user=ansible@10.10.10.229 \
+                                --extra-vars "artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
                     '''
                 }
             }
