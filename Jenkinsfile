@@ -84,7 +84,7 @@ pipeline {
                     sh '''
                         # Set environment variables securely
                         export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -i "$SSH_KEY"
-                        export PATH="$PATH:/usr/local/bin"  # Add common paths where Ansible might be
+                        export PATH="$PATH:/usr/bin"  
                         
                         # Verify Ansible is available
                         if ! command -v ansible-playbook &> /dev/null; then
