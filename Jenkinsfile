@@ -135,7 +135,7 @@ pipeline {
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         def result = sh(script: """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' root@10.10.10.229 '
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
                                 kubectl get pods -n default -l app=myapp && \
                                 kubectl get svc myapp -n default
                             '
