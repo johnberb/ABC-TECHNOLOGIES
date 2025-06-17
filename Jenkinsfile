@@ -113,7 +113,7 @@ pipeline {
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' root@10.10.10.229 '
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
                                 cd ${ANSIBLE_HOME} && \
                                 ansible-playbook \
                                     -i /etc/ansible/hosts \
