@@ -108,7 +108,7 @@ pipeline {
         stage('Deploy to K8s') {
             steps {
                 script {
-                    sshagent([sshUserPrivateKey(
+                    withCredentials([sshUserPrivateKey(
                         credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
