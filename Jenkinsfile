@@ -107,7 +107,7 @@ pipeline {
         // STAGE 6: Deploy to Kubernetes
         stage('Deploy to K8s') {
             steps {
-                script {
+                
                     withCredentialst([sshUserPrivateKey(
                         credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
@@ -122,7 +122,7 @@ pipeline {
                             '
                         """
                     }
-                }
+                
             }
         }
         
