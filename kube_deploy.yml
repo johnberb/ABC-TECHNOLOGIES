@@ -1,0 +1,50 @@
+---
+- name: Deploy to Kubernetes via SSH
+  hosts: localhost
+  vars:
+    image_name: "johnberb/myapp"   # Your original variable
+    image_tag: "latest"               # Your original variable
+    k8s_namespace: "default"      # Your original variable
+    k8s_host: "docker@10.10.10.211"  # Added for flexibility
+
+  tasks:
+    - name: Apply Kubernetes deployment
+      ansible.builtin.shell: |
+        ssh {{ k8s_host }} "kubectl apply -f -" <<'EOF'
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: myapp
+          namespace: {{ k8s_namespace }}
+        spec:
+          replicas: 3
+          selector:
+            matchLabels:
+              app: myapp
+          template:
+            metadata:
+              labels:
+                app: myapp
+            spec:
+              containers:
+              - name: myapp
+                image: {{ image_name }}:{{ image_tag }}
+                ports:
+                - containerPort: 8080
+        EOF
+      args:
+        executable: /bin/bash
+      register: deploy_result
+      changed_when: "'created' in deploy_result.stdout or 'configured' in deploy_result.stdout"
+
+    - name: Verify deployment
+      ansible.builtin.command: >
+        ssh {{ k8s_host }}
+        kubectl get deployment myapp -n {{ k8s_namespace }} -o wide
+      register: verify
+      when: deploy_result is succeeded
+
+    - name: Show deployment status
+      ansible.builtin.debug:
+        var: verify.stdout
+      when: verify is defined
