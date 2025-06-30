@@ -117,7 +117,7 @@ pipeline {
                                 cd ${ANSIBLE_HOME} && \
                                 ansible-playbook \
                                     -i /etc/ansible/hosts \
-                                    playbooks/prometheus_deploy.yml \
+                                    playbooks/kube_deploy.yml \
                                     --extra-vars \"image_tag=${BUILD_NUMBER}\"
                             '
                         """
