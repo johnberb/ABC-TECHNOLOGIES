@@ -146,7 +146,7 @@ pipeline {
             }
         }
         // STAGE 8: Monitoring
-        stage('Deploy to K8s') {
+        stage('Monitoring') {
             steps {
               script {
                     withCredentials([sshUserPrivateKey(       
