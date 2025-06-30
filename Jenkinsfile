@@ -145,6 +145,27 @@ pipeline {
                 }
             }
         }
+        // STAGE 8: Monitoring
+        stage('Deploy to K8s') {
+            steps {
+              script {
+                    withCredentials([sshUserPrivateKey(       
+                        credentialsId: 'Ans2-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                cd ${ANSIBLE_HOME} && \
+                                ansible-playbook \
+                                    -i /etc/ansible/hosts \
+                                    playbooks/prometheus_deploy.yml \
+                                    --extra-vars \"image_tag=${BUILD_NUMBER}\"
+                            '
+                        """
+                    }
+              }
+            }
+        }
     }
     
     post {
