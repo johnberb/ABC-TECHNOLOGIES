@@ -9,6 +9,8 @@ pipeline {
         ANSIBLE_HOME = '/home/ansible/ansible'
         BUILD_NUMBER = "${env.BUILD_ID}"
         REMOTE_ARTIFACT_DIR = '/home/ansible/ansible/tmp/jenkins-artifacts'
+        PROMETHEUS_VERSION = 'v2.47.2'
+        GRAFANA_VERSION = '10.2.3'
     }
     
     stages {
@@ -38,7 +40,12 @@ pipeline {
                         keyFileVariable: 'SSH_KEY'
                     )]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' root@10.10.10.229 'whoami && pwd && mkdir -p ${REMOTE_ARTIFACT_DIR}'
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                whoami && \
+                                pwd && \
+                                mkdir -p ${REMOTE_ARTIFACT_DIR} && \
+                                mkdir -p ${ANSIBLE_HOME}/playbooks
+                            '
                         """
                     }
                 }
@@ -46,87 +53,96 @@ pipeline {
         }
         
         // STAGE 4: Transfer Artifacts
-        stage('Transfer WAR File') {
+        stage('Transfer Files') {
             steps {
-                sshPublisher(
-                    publishers: [
-                        sshPublisherDesc(
-                            configName: 'Ansible',
-                            transfers: [
-                                sshTransfer(
-                                    sourceFiles: '/var/lib/jenkins/jobs/java build/builds/12/archive/target/*.war',
-                                    removePrefix: '/var/lib/jenkins/jobs/java build/builds/12/archive/target',
-                                    remoteDirectory: REMOTE_ARTIFACT_DIR,
-                                    execCommand: "chmod 644 ${REMOTE_ARTIFACT_DIR}/*.war"
-                                )
-                            ],
-                            verbose: true
-                        )
-                    ]
-                )
+                script {
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'Ans2-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        // Transfer WAR file
+                        sh """
+                            scp -o StrictHostKeyChecking=no -i '$SSH_KEY' \
+                                "target/*.war" \
+                                ansible@10.10.10.229:"${REMOTE_ARTIFACT_DIR}/"
+                        """
+                        
+                        // Transfer monitoring playbooks
+                        sh """
+                            scp -o StrictHostKeyChecking=no -i '$SSH_KEY' \
+                                "ansible/playbooks/prometheus_deploy.yml" \
+                                ansible@10.10.10.229:"${ANSIBLE_HOME}/playbooks/"
+                        """
+                    }
+                }
             }
         }
         
         // STAGE 5: Build Docker Image
-        stage('Run Ansible Playbook') {
+        stage('Build Application') {
             steps {
                 withCredentials([sshUserPrivateKey(
                     credentialsId: 'Ans2-ssh-key',
                     keyFileVariable: 'SSH_KEY'
                 )]) {
-                    sh '''
-                        # 1. Copy WAR from Jenkins to Ansible server
-                        scp -i "$SSH_KEY" \
-                            "/var/lib/jenkins/jobs/java build/builds/1/archive/target/ABCtechnologies-1.0.war" \
-                            ansible@10.10.10.229:"/home/ansible/ansible/tmp/jenkins-artifacts/"
-
-                        # 2. Verify file transfer
-                        ssh -i "$SSH_KEY" ansible@10.10.10.229 \
-                            "ls -l /home/ansible/ansible/tmp/jenkins-artifacts/ABCtechnologies-1.0.war"
-                    
-                        #copy private key temporarily onto the ansible server
-                        scp -i "$SSH_KEY" "$SSH_KEY" ansible@10.10.10.229:/home/ansible/.ssh/jenkins_key
-                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "chmod 600 ~/.ssh/jenkins_key"
-  
-                        # Test SSH connection first
-                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "echo 'SSH test successful'"
-        
-                        # Run Ansible PLAYBOOK on the Ansible server (not locally)
-                        ssh -i "$SSH_KEY" ansible@10.10.10.229 "
-                            cd /home/ansible/ansible &&
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 "
+                            cd ${ANSIBLE_HOME} && \
                             ansible-playbook \
                                 -i /etc/ansible/hosts \
                                 playbooks/docker_build.yml \
-                                --extra-vars 'artifact_path=/tmp/jenkins-artifacts/ABCtechnologies-1.0.war'
+                                --extra-vars 'artifact_path=${REMOTE_ARTIFACT_DIR}/*.war image_tag=${BUILD_NUMBER}'
                         "
-                    '''
+                    """
                 }
             }
         }
         
-        // STAGE 6: Deploy to Kubernetes
-        stage('Deploy to K8s') {
+        // STAGE 6: Deploy Application to K8s
+        stage('Deploy Application') {
             steps {
-              script {
-                    withCredentials([sshUserPrivateKey(       
-                        credentialsId: 'Ans2-ssh-key',
-                        keyFileVariable: 'SSH_KEY'
-                    )]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
-                                cd ${ANSIBLE_HOME} && \
-                                ansible-playbook \
-                                    -i /etc/ansible/hosts \
-                                    playbooks/prometheus_deploy.yml \
-                                    --extra-vars \"image_tag=${BUILD_NUMBER}\"
-                            '
-                        """
-                    }
-              }
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'Ans2-ssh-key',
+                    keyFileVariable: 'SSH_KEY'
+                )]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 "
+                            cd ${ANSIBLE_HOME} && \
+                            ansible-playbook \
+                                -i /etc/ansible/hosts \
+                                playbooks/k8s_deploy.yml \
+                                --extra-vars 'image_tag=${BUILD_NUMBER}'
+                        "
+                    """
+                }
             }
         }
         
-        // STAGE 7: Verify Deployment
+        // STAGE 7: Deploy Monitoring Stack
+        stage('Deploy Monitoring') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'Ans2-ssh-key',
+                    keyFileVariable: 'SSH_KEY'
+                )]) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 "
+                            cd ${ANSIBLE_HOME} && \
+                            ansible-playbook \
+                                -i /etc/ansible/hosts \
+                                playbooks/prometheus_deploy.yml \
+                                --extra-vars '\
+                                    prometheus_version=${PROMETHEUS_VERSION} \
+                                    grafana_version=${GRAFANA_VERSION} \
+                                    app_name=myapp \
+                                    app_port=8080'
+                        "
+                    """
+                }
+            }
+        }
+        
+        // STAGE 8: Verify Deployment
         stage('Verify Deployment') {
             steps {
                 script {
@@ -134,13 +150,31 @@ pipeline {
                         credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
-                        def result = sh(script: """
-                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
-                                kubectl get pods -n default -l app=myapp && \
-                                kubectl get svc myapp -n default
+                        // Verify application
+                        def appStatus = sh(script: """
+                            ssh -i '$SSH_KEY' ansible@10.10.10.229 '
+                                kubectl get pods,svc -l app=myapp -n default
                             '
                         """, returnStdout: true)
-                        echo "Deployment Status:\n${result}"
+                        
+                        // Verify monitoring
+                        def monitoringStatus = sh(script: """
+                            ssh -i '$SSH_KEY' ansible@10.10.10.229 '
+                                kubectl get pods,svc -l app=monitoring -n monitoring
+                            '
+                        """, returnStdout: true)
+                        
+                        echo "=== Application Status ===\n${appStatus}"
+                        echo "=== Monitoring Status ===\n${monitoringStatus}"
+                        
+                        // Get Grafana NodePort
+                        def grafanaUrl = sh(script: """
+                            ssh -i '$SSH_KEY' ansible@10.10.10.229 '
+                                kubectl get svc grafana -n monitoring -o jsonpath="{.spec.ports[0].nodePort}"
+                            '
+                        """, returnStdout: true).trim()
+                        
+                        echo "Grafana Dashboard: http://<your-node-ip>:${grafanaUrl} (admin/admin)"
                     }
                 }
             }
@@ -149,7 +183,24 @@ pipeline {
     
     post {
         always {
+            // Cleanup temporary SSH key
+            withCredentials([sshUserPrivateKey(
+                credentialsId: 'Ans2-ssh-key',
+                keyFileVariable: 'SSH_KEY'
+            )]) {
+                sh """
+                    ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                        rm -f ~/.ssh/jenkins_key
+                    ' || true
+                """
+            }
             cleanWs()
+        }
+        success {
+            slackSend color: 'good', message: "SUCCESS: Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+        }
+        failure {
+            slackSend color: 'danger', message: "FAILED: Pipeline ${env.JOB_NAME} #${env.BUILD_NUMBER}"
         }
     }
 }
