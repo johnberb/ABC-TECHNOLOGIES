@@ -145,8 +145,62 @@ pipeline {
                 }
             }
         }
-        // STAGE 8: Monitoring
-        stage('Monitoring') {
+        
+        // STAGE 8: Deploy Node Exporter
+        stage('Deploy Monitoring') {
+            steps {
+                script {
+                    withCredentials([sshUserPrivateKey(
+                        credentialsId: 'Ans2-ssh-key',
+                        keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        // Deploy Node Exporter
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                cat <<EOF | kubectl apply -f -
+                                apiVersion: apps/v1
+                                kind: DaemonSet
+                                metadata:
+                                  name: node-exporter
+                                  namespace: monitoring
+                                  labels:
+                                    app: node-exporter
+                                spec:
+                                  selector:
+                                    matchLabels:
+                                      app: node-exporter
+                                  template:
+                                    metadata:
+                                      labels:
+                                        app: node-exporter
+                                    spec:
+                                      containers:
+                                      - name: node-exporter
+                                        image: prom/node-exporter:latest
+                                        ports:
+                                        - containerPort: 9100
+                                      hostNetwork: true
+                                      hostPID: true
+                                      tolerations:
+                                      - effect: NoSchedule
+                                        operator: Exists
+                                EOF
+                                
+                                # Create monitoring namespace if not exists
+                                kubectl create namespace monitoring || true
+                                
+                                # Verify Node Exporter deployment
+                                kubectl rollout status daemonset/node-exporter -n monitoring --timeout=120s
+                                kubectl get pods -n monitoring -l app=node-exporter
+                            '
+                        """
+                    }
+                }
+            }
+        }
+        
+        // STAGE 9: Deploy Prometheus and Grafana
+        stage('Deploy Observability Stack') {
             steps {
               script {
                     withCredentials([sshUserPrivateKey(       
