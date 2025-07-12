@@ -154,10 +154,9 @@ pipeline {
                         credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
-                        // Deploy Node Exporter
                         sh """
                             ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
-                                cat <<EOF | kubectl apply -f -
+                                cat <<"EOF" | kubectl apply -f -
                                 apiVersion: apps/v1
                                 kind: DaemonSet
                                 metadata:
