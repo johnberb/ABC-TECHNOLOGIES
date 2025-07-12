@@ -95,7 +95,7 @@ pipeline {
                         ssh -i "$SSH_KEY" ansible@10.10.10.229 "
                             # Download and overwrite docker_build.yml from GitHub
                             curl -o /home/ansible/ansible/playbooks/docker_build.yml \
-                                https://raw.githubusercontent.com/johnberb/ABC-TECHNOLOGIES/master/ansible/playbooks/docker_build.yml
+                                https://raw.githubusercontent.com/johnberb/ABC-TECHNOLOGIES/docker_build.yml
                             
                             # Verify file was downloaded
                             ls -l /home/ansible/ansible/playbooks/docker_build.yml
