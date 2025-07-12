@@ -91,15 +91,8 @@ pipeline {
                         # Test SSH connection first
                         ssh -i "$SSH_KEY" ansible@10.10.10.229 "echo 'SSH test successful'"
         
-                        # Run Ansible PLAYBOOK on the Ansible server (not locally)
+                        # Run Ansible PLAYBOOK on the Ansible server 
                         ssh -i "$SSH_KEY" ansible@10.10.10.229 "
-                            # Download and overwrite docker_build.yml from GitHub
-                            curl -o /home/ansible/ansible/playbooks/docker_build.yml \
-                                https://raw.githubusercontent.com/johnberb/ABC-TECHNOLOGIES/master/docker_build.yml
-                            
-                            # Verify file was downloaded
-                            ls -l /home/ansible/ansible/playbooks/docker_build.yml
-                            
                             # Run the playbook
                             cd /home/ansible/ansible &&
                             ansible-playbook \
