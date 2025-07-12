@@ -161,28 +161,28 @@ pipeline {
                                 apiVersion: apps/v1
                                 kind: DaemonSet
                                 metadata:
-                                  name: node-exporter
-                                  namespace: monitoring
-                                  labels:
+                                name: node-exporter
+                                namespace: monitoring
+                                labels:
                                     app: node-exporter
                                 spec:
-                                  selector:
+                                selector:
                                     matchLabels:
-                                      app: node-exporter
-                                  template:
+                                    app: node-exporter
+                                template:
                                     metadata:
-                                      labels:
+                                    labels:
                                         app: node-exporter
                                     spec:
-                                      containers:
-                                      - name: node-exporter
+                                    containers:
+                                    - name: node-exporter
                                         image: prom/node-exporter:latest
                                         ports:
                                         - containerPort: 9100
-                                      hostNetwork: true
-                                      hostPID: true
-                                      tolerations:
-                                      - effect: NoSchedule
+                                    hostNetwork: true
+                                    hostPID: true
+                                    tolerations:
+                                    - effect: NoSchedule
                                         operator: Exists
                                 EOF
                                 
