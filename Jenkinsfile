@@ -183,7 +183,7 @@ pipeline {
                                     tolerations:
                                     - effect: NoSchedule
                                         operator: Exists
-                                        EOF
+                        EOF
                                 
                                 # Create monitoring namespace if not exists
                                 kubectl create namespace monitoring || true
