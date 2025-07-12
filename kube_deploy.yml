@@ -2,10 +2,10 @@
 - name: Deploy to Kubernetes via SSH
   hosts: localhost
   vars:
-    image_name: "johnberb/myapp"   # Your original variable
-    image_tag: "latest"               # Your original variable
-    k8s_namespace: "default"      # Your original variable
-    k8s_host: "docker@10.10.10.211"  # Added for flexibility
+    image_name: "johnberb/myapp"   
+    image_tag: "latest"               
+    k8s_namespace: "default"      
+    k8s_host: "docker@10.10.10.211"  
 
   tasks:
     - name: Apply Kubernetes deployment

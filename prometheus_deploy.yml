@@ -1,0 +1,110 @@
+---
+- name: Deploy Prometheus monitoring
+  hosts: dockerhost  
+  vars:
+    prometheus_version: "v2.47.2"
+    grafana_version: "10.2.3"
+
+  tasks:
+    - name: Ensure monitoring namespace exists
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: monitoring
+
+    # 1. Create ConfigMaps
+    - name: Create Prometheus config
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: prometheus-config
+            namespace: monitoring
+          data:
+            prometheus.yml: |
+              global:
+                scrape_interval: 15s
+              scrape_configs:
+              - job_name: 'myapp'
+                static_configs:
+                - targets: ['13.234.19.53:31386']
+              - job_name: 'node-exporter'
+                kubernetes_sd_configs:
+                  - role: endpoints
+                    namespaces:
+                      names: [monitoring]
+                relabel_configs:
+                - source_labels: [__meta_kubernetes_service_name]
+                  action: keep
+                  regex: node-exporter
+    # 2. Create Deployment
+    - name: Deploy Monitoring Stack
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: monitoring-stack
+            namespace: monitoring
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: monitoring
+            template:
+              metadata:
+                labels:
+                  app: monitoring
+              spec:
+                containers:
+                - name: prometheus
+                  image: "prom/prometheus:{{ prometheus_version }}"
+                  ports:
+                  - containerPort: 9090
+                  volumeMounts:
+                  - name: config
+                    mountPath: /etc/prometheus/prometheus.yml
+                    subPath: prometheus.yml
+                - name: grafana
+                  image: "grafana/grafana:{{ grafana_version }}"
+                  ports:
+                  - containerPort: 3000
+                  env:
+                  - name: GF_SECURITY_ADMIN_USER
+                    value: "admin"
+                  - name: GF_SECURITY_ADMIN_PASSWORD
+                    value: "admin"
+                volumes:
+                - name: config
+                  configMap:
+                    name: prometheus-config
+
+    # 3. Create Services 
+    - name: Expose Monitoring Services
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: monitoring
+            namespace: monitoring
+          spec:
+            type: NodePort
+            selector:
+              app: monitoring
+            ports:
+            - name: prometheus
+              port: 9090
+              targetPort: 9090
+              nodePort: 30090
+            - name: grafana
+              port: 3000
+              targetPort: 3000
+              nodePort: 30300
