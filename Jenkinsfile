@@ -154,47 +154,14 @@ pipeline {
                         credentialsId: 'Ans2-ssh-key',
                         keyFileVariable: 'SSH_KEY'
                     )]) {
-                        // Create YAML locally
-                        writeFile file: 'node-exporter.yaml', text: '''apiVersion: apps/v1
-                        kind: DaemonSet
-                        metadata:
-                        name: node-exporter
-                        namespace: monitoring
-                        labels:
-                            app: node-exporter
-                        spec:
-                        selector:
-                            matchLabels:
-                            app: node-exporter
-                        template:
-                            metadata:
-                            labels:
-                                app: node-exporter
-                            spec:
-                            containers:
-                            - name: node-exporter
-                                image: prom/node-exporter:latest
-                                ports:
-                                - containerPort: 9100
-                            hostNetwork: true
-                            hostPID: true
-                            tolerations:
-                            - effect: NoSchedule
-                                operator: Exists
-                        '''
-
-                        // SCP and SSH to deploy
                         sh """
-                        scp -o StrictHostKeyChecking=no -i '$SSH_KEY' node-exporter.yaml ansible@10.10.10.229:/tmp/node-exporter.yaml
-
-                        ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
-                        kubectl create namespace monitoring || true
-                        kubectl apply -f /tmp/node-exporter.yaml
-                        kubectl rollout status daemonset/node-exporter -n monitoring --timeout=120s
-                        kubectl get pods -n monitoring -l app=node-exporter
-                        '
+                            scp -i '$SSH_KEY' monitoring/node-exporter.yaml ansible@10.10.10.229:/tmp/
+                            ssh -o StrictHostKeyChecking=no -i '$SSH_KEY' ansible@10.10.10.229 '
+                                kubectl create namespace monitoring || true
+                                kubectl apply -f /tmp/node-exporter.yaml
+                                kubectl rollout status daemonset/node-exporter -n monitoring --timeout=120s
+                            '
                         """
-
                     }
                 }
             }
